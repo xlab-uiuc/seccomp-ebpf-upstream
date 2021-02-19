@@ -2464,6 +2464,19 @@ seccomp_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 	if (security_seccomp_extended())
 		return NULL;
 
+	switch (func_id) {
+	case BPF_FUNC_probe_read_user:
+		return capable(CAP_SYS_PTRACE) ?
+			&bpf_probe_read_user_proto :
+			&bpf_probe_read_user_dumpable_proto;
+	case BPF_FUNC_probe_read_user_str:
+		return capable(CAP_SYS_PTRACE) ?
+			&bpf_probe_read_user_str_proto :
+			&bpf_probe_read_user_dumpable_str_proto;
+	default:
+		break;
+	}
+
 	return bpf_base_func_proto(func_id);
 }
 
