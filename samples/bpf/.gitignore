@@ -28,6 +28,7 @@ test_lru_dist
 test_map_in_map
 test_overhead
 test_probe_write_user
+test_seccomp
 trace_event
 trace_output
 tracex1
