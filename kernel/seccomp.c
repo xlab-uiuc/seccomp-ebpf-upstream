@@ -2188,6 +2188,94 @@ long seccomp_get_metadata(struct task_struct *task,
 }
 #endif
 
+#if defined(CONFIG_SECCOMP_FILTER_EXTENDED) && defined(CONFIG_CHECKPOINT_RESTORE)
+long seccomp_get_filter_extended(struct task_struct *task,
+				 unsigned long filter_off,
+				 void __user *data)
+{
+	struct seccomp_filter *filter;
+	struct bpf_prog *prog;
+	long ret;
+
+	if (!capable(CAP_SYS_ADMIN) ||
+	    current->seccomp.mode != SECCOMP_MODE_DISABLED) {
+		return -EACCES;
+	}
+
+	filter = get_nth_filter(task, filter_off);
+	if (IS_ERR(filter))
+		return PTR_ERR(filter);
+
+	if (bpf_prog_was_classic(filter->prog)) {
+		ret = -EMEDIUMTYPE;
+		goto out;
+	}
+	prog = bpf_prog_inc_not_zero(filter->prog);
+	if (IS_ERR(prog)) {
+		ret = PTR_ERR(prog);
+		goto out;
+	}
+
+	ret = bpf_prog_new_fd(filter->prog);
+	if (ret < 0)
+		bpf_prog_put(prog);
+out:
+	__put_seccomp_filter(filter);
+	return ret;
+}
+
+long seccomp_get_map_extended(struct task_struct *task,
+				 unsigned long filter_off,
+				 unsigned long map_off)
+{
+	struct seccomp_filter *filter;
+	struct bpf_prog *prog;
+	struct bpf_map *map;
+	long ret;
+
+	if (!capable(CAP_SYS_ADMIN) ||
+		current->seccomp.mode != SECCOMP_MODE_DISABLED) {
+		return -EACCES;
+	}
+
+	filter = get_nth_filter(task, filter_off);
+	if (IS_ERR(filter))
+		return PTR_ERR(filter);
+
+	if (bpf_prog_was_classic(filter->prog)) {
+		ret = -EMEDIUMTYPE;
+		goto out_put_filter;
+	}
+
+	prog = bpf_prog_inc_not_zero(filter->prog);
+	if (IS_ERR(prog)) {
+		ret = PTR_ERR(prog);
+		goto out_put_filter;
+	}
+
+	if (map_off >= prog->aux->used_map_cnt) {
+		ret = -ENOENT;
+		goto out_put_prog;
+	}
+
+	map = bpf_map_inc_not_zero(prog->aux->used_maps[map_off]);
+	if (IS_ERR(map)) {
+		ret = PTR_ERR(map);
+		goto out_put_prog;
+	}
+
+	ret = bpf_map_new_fd(map, O_RDWR);
+	if (ret < 0)
+		bpf_map_put(map);
+
+out_put_prog:
+	bpf_prog_put(prog);
+out_put_filter:
+	__put_seccomp_filter(filter);
+	return ret;
+}
+#endif
+
 #ifdef CONFIG_SYSCTL
 
 /* Human readable action names for friendly sysctl interaction */

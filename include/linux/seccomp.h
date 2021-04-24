@@ -122,6 +122,27 @@ static inline long seccomp_get_metadata(struct task_struct *task,
 	return -EINVAL;
 }
 #endif /* CONFIG_SECCOMP_FILTER && CONFIG_CHECKPOINT_RESTORE */
+#if defined(CONFIG_SECCOMP_FILTER_EXTENDED) && defined(CONFIG_CHECKPOINT_RESTORE)
+extern long seccomp_get_filter_extended(struct task_struct *task,
+					unsigned long n,
+					void __user *data);
+extern long seccomp_get_map_extended(struct task_struct *task,
+					unsigned long n,
+					unsigned long data);
+#else
+static inline long seccomp_get_filter_extended(struct task_struct *task,
+					       unsigned long n,
+					       void __user *data)
+{
+	return -EINVAL;
+}
+static inline long seccomp_get_map_extended(struct task_struct *task,
+					       unsigned long n,
+					       unsigned long data)
+{
+	return -EINVAL;
+}
+#endif /* CONFIG_SECCOMP_FILTER_EXTENDED && CONFIG_CHECKPOINT_RESTORE */
 
 #ifdef CONFIG_SECCOMP_CACHE_DEBUG
 struct seq_file;
