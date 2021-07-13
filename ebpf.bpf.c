@@ -19,12 +19,7 @@
 #endif
 #ifdef ARCH
 
-struct {
-	__uint(type, BPF_MAP_TYPE_TASK_STORAGE);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
-	__type(key, int);
-	__type(value, int);
-} syscall_state SEC(".maps");
+unsigned int cnt;
 
 SEC("seccomp")
 int seccomp_filter(struct seccomp_data *ctx) {
@@ -36,16 +31,10 @@ int seccomp_filter(struct seccomp_data *ctx) {
 		return SECCOMP_RET_ERRNO | EPERM;
 
 	if (ctx->nr == __NR_getpid) {
-		int *prev = bpf_task_storage_get(&syscall_state, NULL, NULL,
-						 BPF_LOCAL_STORAGE_GET_F_CREATE);
-		if (unlikely(!prev))
-			return SECCOMP_RET_KILL_PROCESS;
-		// First time call
-		if ((*prev)++ < N_CALL / 2) {
+		if (cnt++ < N_CALL / 2)
 			return SECCOMP_RET_ALLOW;
-		} else {
+		else
 			return SECCOMP_RET_ERRNO | EPERM;
-		}
 	}
 
 	return SECCOMP_RET_ALLOW;
