@@ -16,6 +16,7 @@ int main(int argc, char **argv)
 	struct bpf_object *obj;
 	char filename[256];
 	int prog_fd;
+	int new_prog_fd;
 
 	snprintf(filename, sizeof(filename), "%s_kern.o", argv[0]);
 
@@ -33,8 +34,15 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if ((new_prog_fd = dup(prog_fd)) < 0) {
+		perror("dup(prog_fd)");
+		exit(EXIT_FAILURE);
+	}
+
+	bpf_object__close(obj);
+
 	if (syscall(__NR_seccomp, SECCOMP_SET_MODE_FILTER,
-		    SECCOMP_FILTER_FLAG_EXTENDED, &prog_fd)) {
+		    SECCOMP_FILTER_FLAG_EXTENDED, &new_prog_fd)) {
 		perror("seccomp");
 		exit(EXIT_FAILURE);
 	}

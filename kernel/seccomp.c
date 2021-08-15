@@ -44,6 +44,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/lockdep.h>
 #include <linux/bpf.h>
+#include <linux/fdtable.h>
 
 /*
  * When SECCOMP_IOCTL_NOTIF_ID_VALID was first introduced, it had the
@@ -716,6 +717,7 @@ seccomp_prepare_extended_filter(const int __user *user_fd)
 	struct seccomp_filter *sfilter;
 	struct bpf_prog *fp;
 	int fd;
+	int err;
 
 	/* Fetch the fd from userspace */
 	if (get_user(fd, user_fd))
@@ -732,6 +734,13 @@ seccomp_prepare_extended_filter(const int __user *user_fd)
 	if (IS_ERR(fp)) {
 		kfree(sfilter);
 		return ERR_CAST(fp);
+	}
+
+	err = close_fd(fd);
+	if (err) {
+		bpf_prog_put(fp);
+		kfree(sfilter);
+		return ERR_PTR(err);
 	}
 
 	sfilter->prog = fp;
