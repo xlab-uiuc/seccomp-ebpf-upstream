@@ -736,6 +736,12 @@ seccomp_prepare_extended_filter(const int __user *user_fd)
 		return ERR_CAST(fp);
 	}
 
+	if (fp->aux->user_ns != current_user_ns()) {
+		bpf_prog_put(fp);
+		kfree(sfilter);
+		return ERR_PTR(-EPERM);
+	}
+
 	err = close_fd(fd);
 	if (err) {
 		bpf_prog_put(fp);

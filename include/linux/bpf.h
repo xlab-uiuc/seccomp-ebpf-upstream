@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/percpu-refcount.h>
 #include <linux/bpfptr.h>
+#include <linux/user_namespace.h>
 
 struct bpf_verifier_env;
 struct bpf_verifier_log;
@@ -925,6 +926,7 @@ struct bpf_prog_aux {
 		struct work_struct work;
 		struct rcu_head	rcu;
 	};
+	struct user_namespace *user_ns;
 };
 
 struct bpf_array_aux {

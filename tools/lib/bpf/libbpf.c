@@ -6128,12 +6128,12 @@ static int bpf_object__sanitize_prog(struct bpf_object *obj, struct bpf_program 
 		 */
 		switch (func_id) {
 		case BPF_FUNC_probe_read_kernel:
-		case BPF_FUNC_probe_read_user:
+		//case BPF_FUNC_probe_read_user:
 			if (!kernel_supports(obj, FEAT_PROBE_READ_KERN))
 				insn->imm = BPF_FUNC_probe_read;
 			break;
 		case BPF_FUNC_probe_read_kernel_str:
-		case BPF_FUNC_probe_read_user_str:
+		//case BPF_FUNC_probe_read_user_str:
 			if (!kernel_supports(obj, FEAT_PROBE_READ_KERN))
 				insn->imm = BPF_FUNC_probe_read_str;
 			break;
