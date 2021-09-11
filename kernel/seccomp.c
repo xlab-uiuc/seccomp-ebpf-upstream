@@ -45,6 +45,7 @@
 #include <linux/lockdep.h>
 #include <linux/bpf.h>
 #include <linux/fdtable.h>
+#include <linux/rcupdate_trace.h>
 
 /*
  * When SECCOMP_IOCTL_NOTIF_ID_VALID was first introduced, it had the
@@ -417,9 +418,9 @@ static u32 seccomp_run_filters(const struct seccomp_data *sd,
 	for (; f; f = f->prev) {
 		u32 cur_ret;
 
-		rcu_read_lock();
+		rcu_read_lock_trace();
 		cur_ret = bpf_prog_run_pin_on_cpu(f->prog, sd);
-		rcu_read_unlock();
+		rcu_read_unlock_trace();
 
 		if (ACTION_ONLY(cur_ret) < ACTION_ONLY(ret)) {
 			ret = cur_ret;
