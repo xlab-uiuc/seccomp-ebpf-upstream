@@ -53,6 +53,9 @@ static DEFINE_SPINLOCK(link_idr_lock);
 int sysctl_unprivileged_bpf_disabled __read_mostly =
 	IS_BUILTIN(CONFIG_BPF_UNPRIV_DEFAULT_OFF) ? 2 : 0;
 
+int sysctl_seccomp_ebpf_priv_only __read_mostly =
+	IS_BUILTIN(CONFIG_BPF_UNPRIV_DEFAULT_OFF) ? 2 : 0;
+
 static const struct bpf_map_ops * const bpf_map_types[] = {
 #define BPF_PROG_TYPE(_id, _name, prog_ctx_type, kern_ctx_type)
 #define BPF_MAP_TYPE(_id, _ops) \
@@ -2198,13 +2201,18 @@ static int bpf_prog_load(union bpf_attr *attr, bpfptr_t uattr)
 		return -E2BIG;
 	if (type != BPF_PROG_TYPE_SOCKET_FILTER &&
 	    type != BPF_PROG_TYPE_CGROUP_SKB &&
-	    type != BPF_PROG_TYPE_SECCOMP &&
+	    (type != BPF_PROG_TYPE_SECCOMP ||
+		 sysctl_seccomp_ebpf_priv_only) &&
 	    !bpf_capable())
 		return -EPERM;
 
 	if (is_net_admin_prog_type(type) && !capable(CAP_NET_ADMIN) && !capable(CAP_SYS_ADMIN))
 		return -EPERM;
 	if (is_perfmon_prog_type(type) && !perfmon_capable())
+		return -EPERM;
+	if (type == BPF_PROG_TYPE_SECCOMP &&
+		sysctl_seccomp_ebpf_priv_only &&
+		!perfmon_capable())
 		return -EPERM;
 
 	/* attach_prog_fd/attach_btf_obj_fd can specify fd of either bpf_prog

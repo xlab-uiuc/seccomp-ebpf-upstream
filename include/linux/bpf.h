@@ -1434,6 +1434,8 @@ bpf_map_alloc_percpu(const struct bpf_map *map, size_t size, size_t align,
 
 extern int sysctl_unprivileged_bpf_disabled;
 
+extern int sysctl_seccomp_ebpf_priv_only;
+
 static inline bool bpf_allow_ptr_leaks(void)
 {
 	return perfmon_capable();
