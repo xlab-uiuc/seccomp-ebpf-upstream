@@ -16,6 +16,9 @@
 #include <uapi/linux/in.h>
 #include <bpf/bpf_helpers.h>
 
+#ifdef printk
+# undef printk
+#endif
 # define printk(fmt, ...)						\
 		({							\
 			char ____fmt[] = fmt;				\
