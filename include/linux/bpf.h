@@ -24,6 +24,7 @@
 #include <linux/percpu-refcount.h>
 #include <linux/bpfptr.h>
 #include <linux/user_namespace.h>
+#include <linux/pid_namespace.h>
 
 struct bpf_verifier_env;
 struct bpf_verifier_log;
@@ -927,6 +928,7 @@ struct bpf_prog_aux {
 		struct rcu_head	rcu;
 	};
 	struct user_namespace *user_ns;
+	struct pid_namespace *pid_ns;
 };
 
 struct bpf_array_aux {
@@ -1159,6 +1161,11 @@ struct bpf_run_ctx {};
 struct bpf_cg_run_ctx {
 	struct bpf_run_ctx run_ctx;
 	const struct bpf_prog_array_item *prog_item;
+};
+
+struct bpf_seccomp_run_ctx {
+	struct bpf_run_ctx run_ctx;
+	struct pid_namespace *pid_ns;
 };
 
 struct bpf_trace_run_ctx {
@@ -2117,6 +2124,7 @@ extern const struct bpf_func_proto bpf_probe_read_user_proto;
 extern const struct bpf_func_proto bpf_probe_read_user_dumpable_proto;
 extern const struct bpf_func_proto bpf_probe_read_user_str_proto;
 extern const struct bpf_func_proto bpf_probe_read_user_dumpable_str_proto;
+extern const struct bpf_func_proto bpf_get_current_pid_tgid_ns_proto;
 
 const struct bpf_func_proto *bpf_tracing_func_proto(
 	enum bpf_func_id func_id, const struct bpf_prog *prog);

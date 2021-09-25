@@ -1752,6 +1752,7 @@ static void __bpf_prog_put_noref(struct bpf_prog *prog, bool deferred)
 	kvfree(prog->aux->linfo);
 	kfree(prog->aux->kfunc_tab);
 	put_user_ns(prog->aux->user_ns);
+	put_pid_ns(prog->aux->pid_ns);
 	if (prog->aux->attach_btf)
 		btf_put(prog->aux->attach_btf);
 
@@ -2308,6 +2309,7 @@ static int bpf_prog_load(union bpf_attr *attr, bpfptr_t uattr)
 		goto free_prog_sec;
 
 	prog->aux->user_ns = get_user_ns(current_user_ns());
+	prog->aux->pid_ns = get_pid_ns(task_active_pid_ns(current));
 
 	/* run eBPF verifier */
 	err = bpf_check(&prog, attr, uattr);

@@ -195,6 +195,32 @@ const struct bpf_func_proto bpf_get_current_pid_tgid_proto = {
 	.ret_type	= RET_INTEGER,
 };
 
+BPF_CALL_0(bpf_get_current_pid_tgid_ns)
+{
+	struct task_struct *task = current;
+	struct bpf_seccomp_run_ctx *ctx;
+	struct pid_namespace *pid_ns; 
+	pid_t tgid, pid;
+
+	if (unlikely(!task))
+		return -EINVAL;
+
+	ctx = container_of(task->bpf_ctx, struct bpf_seccomp_run_ctx, run_ctx);
+	pid_ns = ctx->pid_ns;	
+	
+	tgid = __task_pid_nr_ns(task, PIDTYPE_TGID, pid_ns);
+	pid = __task_pid_nr_ns(task, PIDTYPE_PID, pid_ns);
+
+	return (u64) tgid << 32 | pid;
+}
+
+const struct bpf_func_proto bpf_get_current_pid_tgid_ns_proto = {
+        .func           = bpf_get_current_pid_tgid_ns,
+        .gpl_only       = false,
+        .ret_type       = RET_INTEGER,
+};
+
+
 BPF_CALL_0(bpf_get_current_uid_gid)
 {
 	struct task_struct *task = current;

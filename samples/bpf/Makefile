@@ -53,6 +53,7 @@ tprogs-y += ibumad
 tprogs-y += hbm
 tprogs-y += test_seccomp
 tprogs-y += ptrace_ns_override
+tprogs-y += test_pid_ns_helper
 
 tprogs-y += xdp_redirect_cpu
 tprogs-y += xdp_redirect_map_multi
@@ -116,6 +117,7 @@ ibumad-objs := ibumad_user.o
 hbm-objs := hbm.o $(CGROUP_HELPERS)
 test_seccomp-objs := test_seccomp_user.o
 ptrace_ns_override-objs := ptrace_ns_override_user.o
+test_pid_ns_helper-objs := test_pid_ns_helper_user.o
 
 xdp_redirect_map_multi-objs := xdp_redirect_map_multi_user.o $(XDP_SAMPLE)
 xdp_redirect_cpu-objs := xdp_redirect_cpu_user.o $(XDP_SAMPLE)
@@ -181,6 +183,7 @@ always-y += hbm_edt_kern.o
 always-y += xdpsock_kern.o
 always-y += test_seccomp_kern.o
 always-y += ptrace_ns_override_kern.o
+always-y += test_pid_ns_helper_kern.o
 
 ifeq ($(ARCH), arm)
 # Strip all except -D__LINUX_ARM_ARCH__ option needed to handle linux

@@ -417,9 +417,14 @@ static u32 seccomp_run_filters(const struct seccomp_data *sd,
 	 */
 	for (; f; f = f->prev) {
 		u32 cur_ret;
+		struct bpf_run_ctx *old_run_ctx;
+		struct bpf_seccomp_run_ctx run_ctx; 
 
 		rcu_read_lock_trace();
+		old_run_ctx = bpf_set_run_ctx(&run_ctx.run_ctx);
+		run_ctx.pid_ns = f->prog->aux->pid_ns;
 		cur_ret = bpf_prog_run_pin_on_cpu(f->prog, sd);
+		bpf_reset_run_ctx(old_run_ctx);
 		rcu_read_unlock_trace();
 
 		if (ACTION_ONLY(cur_ret) < ACTION_ONLY(ret)) {
@@ -2535,7 +2540,7 @@ seccomp_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 	case BPF_FUNC_get_current_uid_gid:
 		return &bpf_get_current_uid_gid_proto;
 	case BPF_FUNC_get_current_pid_tgid:
-		return &bpf_get_current_pid_tgid_proto;
+		return &bpf_get_current_pid_tgid_ns_proto;
 	case BPF_FUNC_probe_read_user:
 		return ns_capable(current_user_ns(), CAP_SYS_PTRACE) ?
 			&bpf_probe_read_user_proto :
