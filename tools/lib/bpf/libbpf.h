@@ -140,6 +140,7 @@ LIBBPF_API int bpf_object__unpin_programs(struct bpf_object *obj,
 					  const char *path);
 LIBBPF_API int bpf_object__pin(struct bpf_object *object, const char *path);
 LIBBPF_API void bpf_object__close(struct bpf_object *object);
+LIBBPF_API void bpf_seccomp_close_fd(struct bpf_object *obj);
 
 struct bpf_object_load_attr {
 	struct bpf_object *obj;

@@ -577,6 +577,34 @@ void bpf_program__unload(struct bpf_program *prog)
 	zfree(&prog->line_info);
 }
 
+static void bpf_program__unload_keep_fd(struct bpf_program *prog)
+{
+	int i;
+
+	if (!prog)
+		return;
+
+	/*
+	 * If the object is opened but the program was never loaded,
+	 * it is possible that prog->instances.nr == -1.
+	 */
+	if (prog->instances.nr > 0) {
+		/* Keep the first fd */
+		for (i = 1; i < prog->instances.nr; i++)
+			zclose(prog->instances.fds[i]);
+		prog->instances.fds[0] = 0;
+	} else if (prog->instances.nr != -1) {
+		pr_warn("Internal error: instances.nr is %d\n",
+			prog->instances.nr);
+	}
+
+	prog->instances.nr = -1;
+	zfree(&prog->instances.fds);
+
+	zfree(&prog->func_info);
+	zfree(&prog->line_info);
+}
+
 static void bpf_program__exit(struct bpf_program *prog)
 {
 	if (!prog)
@@ -589,6 +617,29 @@ static void bpf_program__exit(struct bpf_program *prog)
 	prog->clear_priv = NULL;
 
 	bpf_program__unload(prog);
+	zfree(&prog->name);
+	zfree(&prog->sec_name);
+	zfree(&prog->pin_name);
+	zfree(&prog->insns);
+	zfree(&prog->reloc_desc);
+
+	prog->nr_reloc = 0;
+	prog->insns_cnt = 0;
+	prog->sec_idx = -1;
+}
+
+static void bpf_program__exit_keep_fd(struct bpf_program *prog)
+{
+	if (!prog)
+		return;
+
+	if (prog->clear_priv)
+		prog->clear_priv(prog, prog->priv);
+
+	prog->priv = NULL;
+	prog->clear_priv = NULL;
+
+	bpf_program__unload_keep_fd(prog);
 	zfree(&prog->name);
 	zfree(&prog->sec_name);
 	zfree(&prog->pin_name);
@@ -6679,6 +6730,28 @@ int bpf_object__unload(struct bpf_object *obj)
 	return 0;
 }
 
+static int bpf_object__unload_keep_fd(struct bpf_object *obj)
+{
+	size_t i;
+
+	if (!obj)
+		return libbpf_err(-EINVAL);
+
+	for (i = 0; i < obj->nr_maps; i++) {
+		zclose(obj->maps[i].fd);
+		if (obj->maps[i].st_ops)
+			zfree(&obj->maps[i].st_ops->kern_vdata);
+	}
+
+	for (i = 1; i < obj->nr_programs; i++)
+		bpf_program__unload(&obj->programs[i]);
+
+	if (obj->nr_programs > 0)
+		bpf_program__unload_keep_fd(&obj->programs[0]);
+
+	return 0;
+}
+
 static int bpf_object__sanitize_maps(struct bpf_object *obj)
 {
 	struct bpf_map *m;
@@ -7687,6 +7760,45 @@ void bpf_object__close(struct bpf_object *obj)
 
 	list_del(&obj->list);
 	free(obj);
+}
+
+void bpf_seccomp_close_fd(struct bpf_object *obj)
+{
+	size_t i;
+
+	if (IS_ERR_OR_NULL(obj))
+		return;
+
+	if (obj->clear_priv)
+		obj->clear_priv(obj, obj->priv);
+
+	bpf_gen__free(obj->gen_loader);
+	bpf_object__elf_finish(obj);
+	bpf_object__unload_keep_fd(obj);
+	btf__free(obj->btf);
+	btf_ext__free(obj->btf_ext);
+
+	for (i = 0; i < obj->nr_maps; i++)
+		bpf_map__destroy(&obj->maps[i]);
+
+	zfree(&obj->btf_custom_path);
+	zfree(&obj->kconfig);
+	zfree(&obj->externs);
+	obj->nr_extern = 0;
+
+	zfree(&obj->maps);
+	obj->nr_maps = 0;
+
+	if (obj->programs && obj->nr_programs > 0) {
+		for (i = 1; i < obj->nr_programs; i++)
+			bpf_program__exit(&obj->programs[i]);
+		bpf_program__exit_keep_fd(&obj->programs[0]);
+	}
+
+	zfree(&obj->programs);
+
+	list_del(&obj->list);
+	zfree(&obj);
 }
 
 struct bpf_object *
