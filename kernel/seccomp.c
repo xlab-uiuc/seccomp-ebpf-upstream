@@ -2464,7 +2464,7 @@ seccomp_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 	if (security_seccomp_extended())
 		return NULL;
 
-	return NULL;
+	return bpf_base_func_proto(func_id);
 }
 
 const struct bpf_prog_ops seccomp_prog_ops = {
